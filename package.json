@@ -23,6 +23,17 @@
     "react-router-dom": "^7.9.4",
     "recharts": "^3.3.0",
     "yarn": "^1.22.22"
+  },
+
+  {
+  "name": "restomapkbackend",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
   }
+}
 
 }
