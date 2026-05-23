@@ -27,32 +27,20 @@ const WelcomePage = () => {
     setAuthMode('login')
   }
 
-  const handleLogin = async (email, password, siteCode) => {
-    try {
-      const response = await fetch('https://restom-backend-2.onrender.com/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ email, password, siteCode })
-      })
-      const data = await response.json()
-      if (response.ok) {
-        localStorage.setItem('token', data.token)
-        // Store siteCode from login response
-        if (data.user && data.user.siteCode) {
-          localStorage.setItem('siteCode', data.user.siteCode)
-        }
-        login(data.user)
-        setShowAuthModal(false)
-        navigate('/menu')
-      } else {
-        toast.error(data.message || 'Login failed')
-      }
-    } catch (error) {
-      console.error('Login error:', error)
-      toast.error('Login failed. Please try again.')
+  const handleLoginSuccess = (token, user) => {
+    localStorage.setItem('token', token)
+    if (user?.siteCode) {
+      localStorage.setItem('siteCode', user.siteCode)
     }
+    login({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone || '',
+      profilePicture: '',
+    })
+    setShowAuthModal(false)
+    navigate('/menu')
   }
 
   const handleSignup = async (userData) => {
@@ -176,8 +164,7 @@ const WelcomePage = () => {
         authMode === 'login' ? (
           <Login
             onClose={handleCloseAuth}
-            onSwitchToSignup={handleSwitchToSignup}
-            onLogin={handleLogin}
+            onLoginSuccess={handleLoginSuccess}
           />
         ) : (
           <Signup

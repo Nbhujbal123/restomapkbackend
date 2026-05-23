@@ -91,8 +91,6 @@ const Dashboard: React.FC = () => {
     };
 
     fetchStats();
-    const interval = setInterval(fetchStats, 10000);
-    return () => clearInterval(interval);
   }, []);
 
   const localOrders = stats?.recentOrders || [];
@@ -322,11 +320,11 @@ const Dashboard: React.FC = () => {
                 e.currentTarget.style.boxShadow = '0 4px 15px rgba(16, 185, 129, 0.3)';
               }}
             >
-              <div className="card-body">
-                <div className="fs-1 mb-3">
+              <div className="card-body d-flex flex-column justify-content-center">
+                <div className="fs-1 mb-2">
                   <FaRupeeSign />
                 </div>
-                <h3 className="fw-bold mb-1">₹{stats?.todayRevenue || '0.00'}</h3>
+                <h3 className="fw-bold mb-1" style={{ fontSize: '2rem' }}>₹{Math.round(parseFloat(stats?.todayRevenue || '0'))}</h3>
                 <p className="mb-0 opacity-75">Today's Revenue</p>
               </div>
             </div>

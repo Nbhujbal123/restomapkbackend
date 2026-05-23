@@ -218,12 +218,6 @@ const Billing: React.FC = () => {
       }
     };
 
-    // Refresh every 5 seconds
-    const interval = setInterval(() => {
-      fetchBills();
-      fetchStats();
-    }, 5000);
-    return () => clearInterval(interval);
   }, [filters]);
 
   // View bill details

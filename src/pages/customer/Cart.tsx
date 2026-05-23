@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useCart } from '../../context/CartContext'
 import { useAuth } from '../../context/AuthContext'
@@ -15,9 +15,9 @@ const Cart = () => {
   const [orderItems, setOrderItems] = useState<any[]>([])
   const [orderTotal, setOrderTotal] = useState(0)
   const [orderTableNumber, setOrderTableNumber] = useState<string | null>(null)
-  
-  const TAX_RATE = 0.05
-  const taxAmount = getTotalPrice() * TAX_RATE
+
+  const TAX_RATE   = 0.05
+  const taxAmount  = getTotalPrice() * TAX_RATE
   const grandTotal = getTotalPrice() + taxAmount
 
   const handleQuantityChange = (id: number, newQty: number) => {
@@ -26,82 +26,54 @@ const Cart = () => {
   }
 
   const handleClearCart = () => {
-    if (window.confirm('Are you sure you want to clear your cart?')) {
-      clearCart()
-    }
-  }
-
-  const handleContinueShopping = () => {
-    navigate('/menu')
+    if (window.confirm('Are you sure you want to clear your cart?')) clearCart()
   }
 
   const handleProceedToCheckout = async () => {
-    if (cart.length === 0) {
-      toast.error('Your cart is empty.')
-      return
-    }
-
+    if (cart.length === 0) { toast.error('Your cart is empty.'); return }
     setIsOrdering(true)
-    
-    let userId = user?.id || null
-    let customerName = user?.name || ''
+
+    let userId        = user?.id    || null
+    let customerName  = user?.name  || ''
     let customerEmail = user?.email || ''
-    
+
     const storedUserInfo = localStorage.getItem('userInfo')
     if (storedUserInfo) {
       try {
-        const userInfo = JSON.parse(storedUserInfo)
-        customerName = userInfo.name || customerName
-        customerEmail = userInfo.email || customerEmail
-      } catch (e) {}
+        const info    = JSON.parse(storedUserInfo)
+        customerName  = info.name  || customerName
+        customerEmail = info.email || customerEmail
+      } catch {}
     }
-    
+
     const orderPayload = {
       user: userId,
-      tableNumber: tableNumber,
+      tableNumber,
       orderType: tableNumber ? 'dine-in' : 'takeaway',
-      customer: {
-        name: customerName,
-        email: customerEmail,
-        phone: '',
-        address: tableNumber ? `Table ${tableNumber}` : ''
-      },
-      items: cart.map(item => ({
-        menuItemId: item.id,
-        name: item.name,
-        price: item.price,
-        quantity: item.quantity
-      })),
-      totalAmount: grandTotal
+      customer: { name: customerName, email: customerEmail, phone: '', address: tableNumber ? `Table ${tableNumber}` : '' },
+      items: cart.map(i => ({ menuItemId: i.id, name: i.name, price: i.price, quantity: i.quantity })),
+      totalAmount: grandTotal,
     }
 
     try {
       const siteCode = localStorage.getItem('siteCode') || ''
-      const response = await fetch(`${API_BASE_URL}/orders`, {
+      const res = await fetch(`${API_BASE_URL}/orders`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-site-code': siteCode
-        },
-        body: JSON.stringify(orderPayload)
+        headers: { 'Content-Type': 'application/json', 'x-site-code': siteCode },
+        body: JSON.stringify(orderPayload),
       })
-
-      if (response.ok) {
-        // Save order details before clearing cart
-        setOrderItems(cart.map(item => ({ name: item.name, quantity: item.quantity, price: item.price })))
+      if (res.ok) {
+        setOrderItems(cart.map(i => ({ name: i.name, quantity: i.quantity, price: i.price })))
         setOrderTotal(grandTotal)
         setOrderTableNumber(tableNumber)
-        // Show popup
         setShowOrderPlaced(true)
-        // Keep the popup visible
         setIsOrdering(false)
       } else {
-        const errorData = await response.json().catch(() => ({}))
-        toast.error(errorData.message || 'Failed to place order. Please try again.')
+        const err = await res.json().catch(() => ({}))
+        toast.error(err.message || 'Failed to place order. Please try again.')
         setIsOrdering(false)
       }
-    } catch (error) {
-      console.error('Error placing order:', error)
+    } catch {
       toast.error('Network error. Please check your connection and try again.')
       setIsOrdering(false)
     }
@@ -113,222 +85,383 @@ const Cart = () => {
     navigate('/profile')
   }
 
+  /* ─── empty state ─── */
   if (cart.length === 0) {
     return (
-      <div className="container py-5 text-center" style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        <div className="d-flex justify-content-start mb-3">
-          <Link
-            to="/menu"
-            className="btn btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center text-decoration-none"
-            style={{ width: '40px', height: '40px' }}
-          >
-            <FaArrowLeft />
-          </Link>
+      <div style={{
+        background: '#f8f9fa', minHeight: '80vh',
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        padding: '40px 20px', textAlign: 'center',
+      }}>
+        <div style={{
+          width: '100px', height: '100px', borderRadius: '50%',
+          background: '#fff8f0', display: 'flex',
+          alignItems: 'center', justifyContent: 'center',
+          marginBottom: '20px', boxShadow: '0 4px 20px rgba(255,106,0,.15)',
+        }}>
+          <FaShoppingCart size={40} style={{ color: '#FF6A00', opacity: .6 }} />
         </div>
-        <div className="mb-4">
-          <FaShoppingCart className="text-muted" style={{ fontSize: '4rem', opacity: 0.5 }} />
-        </div>
-        <h2 className="fw-bold mb-3" style={{ color: '#4F46E5' }}>Your cart is empty</h2>
-        <p className="text-muted mb-4">Add something tasty from our menu!</p>
-        <Link
-          to="/menu"
-          className="btn rounded-pill px-4 text-white text-decoration-none mx-auto"
-          style={{
-            background: '#4F46E5',
-            border: 'none',
-            padding: '12px 32px',
-            fontWeight: 600,
-            transition: 'all 0.3s ease'
-          }}
-        >
+        <h3 style={{ fontWeight: 800, color: '#1f2937', marginBottom: '8px' }}>Your cart is empty</h3>
+        <p style={{ color: '#9ca3af', marginBottom: '24px' }}>Add something tasty from our menu!</p>
+        <Link to="/menu" style={{
+          background: 'linear-gradient(90deg,#FF6A00,#FF9900)', color: '#fff',
+          borderRadius: '50px', padding: '12px 36px', textDecoration: 'none',
+          fontWeight: 700, fontSize: '15px', boxShadow: '0 4px 16px rgba(255,106,0,.3)',
+        }}>
           Browse Menu
         </Link>
       </div>
     )
   }
-  
+
+  /* ─── qty stepper ─── */
+  const QtyControl = ({ item }: { item: typeof cart[0] }) => (
+    <div style={{
+      display: 'inline-flex', alignItems: 'center',
+      background: 'linear-gradient(90deg,#FF6A00,#FF9900)',
+      borderRadius: '50px', overflow: 'hidden',
+    }}>
+      <button onClick={() => handleQuantityChange(item.id, item.quantity - 1)} style={{
+        background: 'transparent', border: 'none', color: '#fff',
+        width: '34px', height: '34px', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <FaMinus size={10} />
+      </button>
+      <span style={{ color: '#fff', fontWeight: 800, fontSize: '14px', minWidth: '24px', textAlign: 'center' }}>
+        {item.quantity}
+      </span>
+      <button onClick={() => handleQuantityChange(item.id, item.quantity + 1)} style={{
+        background: 'transparent', border: 'none', color: '#fff',
+        width: '34px', height: '34px', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <FaPlus size={10} />
+      </button>
+    </div>
+  )
+
   return (
     <>
-      <div className="container py-4 py-md-5">
-        <div className="d-flex align-items-center mb-4">
-          <Link
-            to="/menu"
-            className="btn btn-outline-secondary me-3 rounded-circle d-flex align-items-center justify-content-center"
-            style={{ width: '40px', height: '40px' }}
-          >
-            <FaArrowLeft />
-          </Link>
-          <h1 className="h4 fw-bold mb-0" style={{ color: '#4F46E5' }}>
-            Your Order
-          </h1>
-        </div>
+      {/* ─── responsive styles ─── */}
+      <style>{`
+        .cart-page { background: #f8f9fa; min-height: 100vh; padding: 16px 12px 120px; }
+        .cart-inner { max-width: 960px; margin: 0 auto; }
 
-        <div className="row g-4">
-          <div className="col-12 col-lg-8">
-            <div className="card border-0 shadow-lg rounded-4">
-              <div className="card-body p-3 p-md-4">
-                {cart.map((item, index) => (
-                  <div
-                    key={`${item.id}-${item.spiceLevel}`}
-                    className="d-flex align-items-center justify-content-between border-bottom py-3 flex-wrap flex-md-nowrap"
-                    style={{ gap: '12px' }}
-                  >
-                    <div className="d-flex align-items-center flex-grow-1" style={{ minWidth: '180px' }}>
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="rounded"
-                        style={{ width: '60px', height: '60px', objectFit: 'cover', border: '2px solid #E0E7FF', flexShrink: 0 }}
-                      />
-                      <div className="ms-3">
-                        <h6 className="fw-semibold mb-1" style={{ fontSize: '15px', color: '#1F2937' }}>
-                          {item.name}
-                        </h6>
-                        <span className="badge" style={{ background: '#EEF2FF', color: '#4F46E5', fontSize: '11px' }}>
-                          ₹{item.price.toFixed(2)} each
-                        </span>
-                      </div>
-                    </div>
+        /* item row — desktop */
+        .cart-item {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          padding: 14px 18px;
+          border-bottom: 1px solid #f3f4f6;
+        }
+        .cart-item-info   { flex: 1; min-width: 0; }
+        .cart-item-right  { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+        .cart-item-total  { font-weight: 800; font-size: 15px; color: #1f2937; min-width: 68px; text-align: right; }
+        .cart-item-img    { width: 68px; height: 68px; border-radius: 12px; object-fit: cover; flex-shrink: 0; border: 2px solid #fff8f0; }
 
-                    <div className="d-flex align-items-center rounded-pill" style={{ background: '#4F46E5', padding: '6px 12px', minWidth: '90px' }}>
-                      <button className="btn btn-sm text-white fw-bold p-0" style={{ background: 'transparent', border: 'none', fontSize: '12px' }} onClick={() => handleQuantityChange(item.id, item.quantity - 1)}>
-                        <FaMinus />
-                      </button>
-                      <span className="fw-bold text-white mx-2" style={{ fontSize: '14px', minWidth: '20px', textAlign: 'center' }}>
-                        {item.quantity}
-                      </span>
-                      <button className="btn btn-sm text-white fw-bold p-0" style={{ background: 'transparent', border: 'none', fontSize: '12px' }} onClick={() => handleQuantityChange(item.id, item.quantity + 1)}>
-                        <FaPlus />
-                      </button>
-                    </div>
+        /* item row — mobile (<= 500px) */
+        @media (max-width: 500px) {
+          .cart-item         { flex-wrap: wrap; gap: 10px; padding: 12px 14px; }
+          .cart-item-img     { width: 56px; height: 56px; border-radius: 10px; }
+          .cart-item-info    { flex: 1; min-width: 0; }
+          .cart-item-right   { width: 100%; justify-content: space-between; margin-top: 2px; }
+          .cart-item-total   { font-size: 14px; min-width: unset; }
+        }
 
-                    <div className="fw-bold" style={{ color: '#4F46E5', fontSize: '15px', minWidth: '80px', textAlign: 'right' }}>
-                      ₹{(item.price * item.quantity).toFixed(2)}
-                    </div>
+        /* summary sidebar */
+        .cart-summary-sidebar { position: sticky; top: 72px; }
 
-                    <button className="btn btn-sm rounded-circle" style={{ width: '32px', height: '32px', background: '#FEF2F2', color: '#DC2626', border: 'none' }} onClick={() => handleQuantityChange(item.id, 0)}>
-                      <FaTrash size={13} />
-                    </button>
-                  </div>
-                ))}
-              </div>
+        /* mobile bottom bar — hidden on desktop */
+        .cart-bottom-bar {
+          display: none;
+        }
+        @media (max-width: 991px) {
+          .cart-page { padding-bottom: 140px; }
+          .cart-bottom-bar {
+            display: block;
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: #fff;
+            border-top: 1px solid #f3f4f6;
+            padding: 12px 16px;
+            z-index: 500;
+            box-shadow: 0 -4px 20px rgba(0,0,0,.10);
+          }
+          /* hide the sidebar summary on mobile since bottom bar covers it */
+          .cart-summary-col { display: none !important; }
+        }
+      `}</style>
+
+      <div className="cart-page">
+        <div className="cart-inner">
+
+          {/* ── header ── */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px' }}>
+            <Link to="/menu" style={{
+              width: '40px', height: '40px', borderRadius: '50%',
+              background: '#fff', border: '1px solid #e5e7eb',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#374151', textDecoration: 'none',
+              boxShadow: '0 2px 8px rgba(0,0,0,.07)', flexShrink: 0,
+            }}>
+              <FaArrowLeft size={14} />
+            </Link>
+            <div>
+              <h1 style={{ fontWeight: 800, fontSize: '20px', color: '#1f2937', margin: 0 }}>Your Order</h1>
+              <p style={{ color: '#9ca3af', fontSize: '13px', margin: 0 }}>
+                {cart.length} item{cart.length !== 1 ? 's' : ''}
+              </p>
             </div>
           </div>
 
-          <div className="col-12 col-lg-4">
-            <div className="card border-0 shadow-lg rounded-4" style={{ position: 'sticky', top: '20px' }}>
-              <div className="card-header text-white rounded-top-4" style={{ background: '#4F46E5' }}>
-                <h5 className="mb-0 fw-semibold">Order Summary</h5>
+          {/* table badge (mobile visible) */}
+          {tableNumber && (
+            <div style={{
+              background: '#fff8f0', border: '1px solid #fde8cc',
+              borderRadius: '12px', padding: '10px 16px', marginBottom: '16px',
+              display: 'flex', alignItems: 'center', gap: '10px',
+            }}>
+              <span style={{ fontSize: '20px' }}>🍽</span>
+              <div>
+                <div style={{ fontSize: '11px', color: '#9ca3af', fontWeight: 600 }}>DINING AT</div>
+                <div style={{ fontWeight: 800, color: '#FF6A00' }}>Table {tableNumber}</div>
               </div>
+            </div>
+          )}
 
-              <div className="card-body p-4">
-                {tableNumber && (
-                  <div className="mb-3 p-3 rounded-3" style={{ background: 'linear-gradient(135deg, #4F46E5, #6366F1)', color: 'white' }}>
-                    <div className="d-flex align-items-center">
-                      <span className="me-2 fs-5">🍽</span>
-                      <div>
-                        <small className="d-block opacity-75" style={{ fontSize: '11px' }}>Dining at</small>
-                        <strong>Table {tableNumber}</strong>
+          <div className="row g-4">
+
+            {/* ── cart items list ── */}
+            <div className="col-12 col-lg-7">
+              <div style={{ background: '#fff', borderRadius: '20px', boxShadow: '0 2px 16px rgba(0,0,0,.07)', overflow: 'hidden' }}>
+                {cart.map(item => (
+                  <div key={`${item.id}-${item.spiceLevel}`} className="cart-item">
+
+                    {/* image */}
+                    <img src={item.image} alt={item.name} className="cart-item-img" />
+
+                    {/* name + price */}
+                    <div className="cart-item-info">
+                      <div style={{ fontWeight: 700, fontSize: '14px', color: '#1f2937', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {item.name}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#FF6A00', fontWeight: 600, marginTop: '3px' }}>
+                        ₹{item.price.toFixed(2)} each
                       </div>
                     </div>
+
+                    {/* qty + total + remove */}
+                    <div className="cart-item-right">
+                      <QtyControl item={item} />
+                      <div className="cart-item-total">
+                        ₹{(item.price * item.quantity).toFixed(2)}
+                      </div>
+                      <button onClick={() => handleQuantityChange(item.id, 0)} style={{
+                        width: '32px', height: '32px', borderRadius: '50%',
+                        background: '#fff1f2', color: '#dc2626',
+                        border: 'none', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                      }}>
+                        <FaTrash size={12} />
+                      </button>
+                    </div>
                   </div>
-                )}
+                ))}
+              </div>
 
-                <div className="d-flex justify-content-between mb-3">
-                  <span className="text-muted">Subtotal:</span>
-                  <span className="fw-bold" style={{ color: '#4F46E5' }}>₹{getTotalPrice().toFixed(2)}</span>
+              {/* clear cart */}
+              <button onClick={handleClearCart} style={{
+                marginTop: '12px', background: 'transparent', border: 'none',
+                color: '#9ca3af', fontSize: '13px', cursor: 'pointer',
+                padding: '4px 0', display: 'flex', alignItems: 'center', gap: '6px',
+              }}>
+                <FaTrash size={11} /> Clear cart
+              </button>
+            </div>
+
+            {/* ── order summary sidebar (desktop only) ── */}
+            <div className="col-12 col-lg-5 cart-summary-col">
+              <div className="cart-summary-sidebar" style={{
+                background: '#fff', borderRadius: '20px',
+                boxShadow: '0 2px 16px rgba(0,0,0,.07)', overflow: 'hidden',
+              }}>
+                <div style={{ background: 'linear-gradient(90deg,#FF6A00,#FF9900)', padding: '18px 24px' }}>
+                  <h5 style={{ color: '#fff', fontWeight: 800, margin: 0 }}>Order Summary</h5>
                 </div>
 
-                <div className="d-flex justify-content-between mb-3">
-                  <span className="text-muted">Tax (5%):</span>
-                  <span className="fw-bold" style={{ color: '#4F46E5' }}>₹{taxAmount.toFixed(2)}</span>
-                </div>
-
-                <hr style={{ borderColor: '#E5E7EB' }} />
-
-                <div className="d-flex justify-content-between mb-4">
-                  <span className="fw-bold fs-5" style={{ color: '#1F2937' }}>Total Amount:</span>
-                  <span className="fw-bold fs-5" style={{ color: '#4F46E5' }}>₹{grandTotal.toFixed(2)}</span>
-                </div>
-
-                <button
-                  className="btn w-100 mb-3 fw-semibold rounded-pill py-2 text-white d-flex align-items-center justify-content-center"
-                  disabled={isOrdering}
-                  style={{ background: '#4F46E5', border: 'none' }}
-                  onClick={handleProceedToCheckout}
-                >
-                  {isOrdering ? (
-                    <>
-                      <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <FaCheckCircle className="me-2" />
-                      Place order
-                    </>
+                <div style={{ padding: '20px 24px' }}>
+                  {tableNumber && (
+                    <div style={{
+                      background: '#fff8f0', borderRadius: '12px', padding: '12px 16px',
+                      marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px',
+                      border: '1px solid #fde8cc',
+                    }}>
+                      <span style={{ fontSize: '22px' }}>🍽</span>
+                      <div>
+                        <div style={{ fontSize: '11px', color: '#9ca3af', fontWeight: 600 }}>DINING AT</div>
+                        <div style={{ fontWeight: 800, color: '#FF6A00' }}>Table {tableNumber}</div>
+                      </div>
+                    </div>
                   )}
-                </button>
 
-                <button className="btn btn-outline w-100 mb-2 fw-semibold rounded-pill py-2" style={{ borderColor: '#4F46E5', color: '#4F46E5' }} onClick={handleContinueShopping}>
-                  <FaShoppingBag className="me-2" />
-                  Continue Shopping
-                </button>
+                  {[
+                    { label: 'Subtotal', value: `₹${getTotalPrice().toFixed(2)}` },
+                    { label: 'Tax (5%)', value: `₹${taxAmount.toFixed(2)}` },
+                  ].map(row => (
+                    <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '14px' }}>
+                      <span style={{ color: '#6b7280' }}>{row.label}</span>
+                      <span style={{ fontWeight: 600, color: '#374151' }}>{row.value}</span>
+                    </div>
+                  ))}
 
-                <button className="btn w-100 fw-semibold rounded-pill py-2" style={{ background: '#FEF2F2', color: '#DC2626', border: 'none' }} onClick={handleClearCart}>
-                  <FaTrash className="me-2" />
-                  Clear Cart
-                </button>
+                  <div style={{ height: '1px', background: '#f3f4f6', margin: '14px 0' }} />
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+                    <span style={{ fontWeight: 800, fontSize: '16px', color: '#1f2937' }}>Total</span>
+                    <span style={{ fontWeight: 800, fontSize: '20px', color: '#FF6A00' }}>₹{grandTotal.toFixed(2)}</span>
+                  </div>
+
+                  <button disabled={isOrdering} onClick={handleProceedToCheckout} style={{
+                    width: '100%', border: 'none', borderRadius: '50px', padding: '14px',
+                    background: isOrdering ? '#d1d5db' : 'linear-gradient(90deg,#FF6A00,#FF9900)',
+                    color: '#fff', fontWeight: 800, fontSize: '15px',
+                    cursor: isOrdering ? 'not-allowed' : 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                    boxShadow: isOrdering ? 'none' : '0 6px 20px rgba(255,106,0,.35)',
+                    marginBottom: '10px', transition: 'all .2s',
+                  }}>
+                    {isOrdering
+                      ? <><span className="spinner-border spinner-border-sm me-1" role="status" /> Processing…</>
+                      : <><FaCheckCircle /> Place Order</>}
+                  </button>
+
+                  <button onClick={() => navigate('/menu')} style={{
+                    width: '100%', border: '2px solid #FF9900', borderRadius: '50px', padding: '12px',
+                    background: 'transparent', color: '#FF6A00', fontWeight: 700, fontSize: '14px',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                  }}>
+                    <FaShoppingBag /> Continue Shopping
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Order Placed Success Popup */}
+      {/* ── mobile bottom bar ── */}
+      <div className="cart-bottom-bar">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+          <div>
+            <div style={{ fontSize: '12px', color: '#9ca3af' }}>Subtotal + Tax (5%)</div>
+            <div style={{ fontWeight: 800, fontSize: '20px', color: '#FF6A00' }}>₹{grandTotal.toFixed(2)}</div>
+          </div>
+          <button onClick={() => navigate('/menu')} style={{
+            border: 'none', background: '#f3f4f6', color: '#6b7280',
+            borderRadius: '50px', padding: '8px 16px',
+            fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: '6px',
+          }}>
+            <FaShoppingBag size={12} /> Menu
+          </button>
+        </div>
+        <button disabled={isOrdering} onClick={handleProceedToCheckout} style={{
+          width: '100%', border: 'none', borderRadius: '50px', padding: '15px',
+          background: isOrdering ? '#d1d5db' : 'linear-gradient(90deg,#FF6A00,#FF9900)',
+          color: '#fff', fontWeight: 800, fontSize: '16px',
+          cursor: isOrdering ? 'not-allowed' : 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+          boxShadow: isOrdering ? 'none' : '0 6px 20px rgba(255,106,0,.4)',
+        }}>
+          {isOrdering
+            ? <><span className="spinner-border spinner-border-sm me-1" role="status" /> Processing…</>
+            : <><FaCheckCircle /> Place Order — ₹{grandTotal.toFixed(2)}</>}
+        </button>
+      </div>
+
+      {/* ── Order Placed Popup ── */}
       {showOrderPlaced && (
-        <div 
-          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+        <div
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)',
+            zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            backdropFilter: 'blur(4px)', cursor: 'pointer',
+          }}
           onClick={handleCloseOrderPlaced}
         >
-          <div 
-            style={{ background: 'white', borderRadius: '20px', padding: '40px', textAlign: 'center', maxWidth: '400px', margin: '20px', cursor: 'default' }}
-            onClick={(e) => e.stopPropagation()}
+          <div
+            style={{
+              background: '#fff', borderRadius: '24px', padding: '32px 24px',
+              maxWidth: '380px', width: '90%', textAlign: 'center', cursor: 'default',
+              boxShadow: '0 20px 60px rgba(0,0,0,.25)',
+            }}
+            onClick={e => e.stopPropagation()}
           >
-            <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'linear-gradient(135deg, #10B981, #34D399)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
-              <FaCheckCircle className="text-white" size={40} />
+            <div style={{
+              width: '80px', height: '80px', borderRadius: '50%',
+              background: 'linear-gradient(135deg,#10B981,#34D399)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 20px', boxShadow: '0 8px 24px rgba(16,185,129,.3)',
+            }}>
+              <FaCheckCircle size={38} style={{ color: '#fff' }} />
             </div>
-            <h3 className="fw-bold mb-3" style={{ color: '#1F2937' }}>Order Placed!</h3>
-            <p className="text-muted mb-4">
-              Your order has been placed successfully.<br />
-              Please wait for a few minutes while we prepare your delicious food.
+
+            <h3 style={{ fontWeight: 800, color: '#1f2937', marginBottom: '8px' }}>Order Placed!</h3>
+            <p style={{ color: '#9ca3af', fontSize: '14px', marginBottom: '16px' }}>
+              We're preparing your delicious food. Hang tight!
             </p>
+
             {orderTableNumber && (
-              <div style={{ background: '#EEF2FF', color: '#4F46E5', padding: '12px', borderRadius: '10px', display: 'inline-block', marginBottom: '20px' }}>
-                <strong>🍽 Table {orderTableNumber}</strong>
+              <div style={{
+                background: '#fff8f0', border: '1px solid #fde8cc',
+                borderRadius: '12px', padding: '10px 16px', marginBottom: '16px',
+                display: 'inline-flex', alignItems: 'center', gap: '8px',
+              }}>
+                <span>🍽</span>
+                <span style={{ fontWeight: 800, color: '#FF6A00' }}>Table {orderTableNumber}</span>
               </div>
             )}
+
             {orderItems.length > 0 && (
-              <div style={{ textAlign: 'left', marginBottom: '20px', padding: '10px', background: '#f9fafb', borderRadius: '10px' }}>
-                <strong style={{ fontSize: '12px', color: '#6b7280' }}>ORDER SUMMARY</strong>
+              <div style={{
+                background: '#f9fafb', borderRadius: '14px',
+                padding: '14px 16px', marginBottom: '20px', textAlign: 'left',
+              }}>
+                <div style={{ fontSize: '11px', color: '#9ca3af', fontWeight: 700, marginBottom: '8px', letterSpacing: '.5px' }}>
+                  ORDER SUMMARY
+                </div>
                 {orderItems.slice(0, 3).map((item: any, idx: number) => (
-                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginTop: '5px' }}>
-                    <span>{item.quantity}x {item.name}</span>
-                    <span style={{ color: '#4F46E5' }}>₹{item.price * item.quantity}</span>
+                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#374151', marginBottom: '4px' }}>
+                    <span>{item.quantity}× {item.name}</span>
+                    <span style={{ color: '#FF6A00', fontWeight: 600 }}>₹{item.price * item.quantity}</span>
                   </div>
                 ))}
-                {orderItems.length > 3 && <div style={{ fontSize: '12px', color: '#6b7280' }}>+{orderItems.length - 3} more items</div>}
-                <div style={{ borderTop: '1px solid #e5e7eb', marginTop: '8px', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
-                  <span>Total</span>
-                  <span style={{ color: '#4F46E5' }}>₹{orderTotal.toFixed(2)}</span>
+                {orderItems.length > 3 && (
+                  <div style={{ fontSize: '12px', color: '#9ca3af' }}>+{orderItems.length - 3} more</div>
+                )}
+                <div style={{ borderTop: '1px solid #e5e7eb', marginTop: '10px', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', fontWeight: 800 }}>
+                  <span style={{ color: '#1f2937' }}>Total</span>
+                  <span style={{ color: '#FF6A00' }}>₹{orderTotal.toFixed(2)}</span>
                 </div>
               </div>
             )}
+
             <div style={{ display: 'grid', gap: '10px' }}>
-              <button className="btn rounded-pill py-2 text-white fw-semibold" style={{ background: '#4F46E5', border: 'none' }} onClick={handleCloseOrderPlaced}>
+              <button onClick={handleCloseOrderPlaced} style={{
+                background: 'linear-gradient(90deg,#FF6A00,#FF9900)', color: '#fff',
+                border: 'none', borderRadius: '50px', padding: '13px',
+                fontWeight: 800, cursor: 'pointer', fontSize: '14px',
+                boxShadow: '0 4px 16px rgba(255,106,0,.3)',
+              }}>
                 View My Orders
               </button>
-              <button className="btn rounded-pill py-2 fw-semibold" style={{ border: '2px solid #4F46E5', color: '#4F46E5', background: 'transparent' }} onClick={() => { setShowOrderPlaced(false); navigate('/menu') }}>
+              <button onClick={() => { setShowOrderPlaced(false); navigate('/menu') }} style={{
+                border: '2px solid #FF9900', color: '#FF6A00',
+                background: 'transparent', borderRadius: '50px',
+                padding: '11px', fontWeight: 700, cursor: 'pointer', fontSize: '14px',
+              }}>
                 Continue Shopping
               </button>
             </div>

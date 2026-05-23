@@ -7,38 +7,27 @@ const LoginWrapper: React.FC = () => {
   const navigate = useNavigate()
   const { login } = useAuth()
 
-  const handleClose = () => {
-    navigate('/')
-  }
+  const handleClose = () => navigate('/')
 
-  const handleSwitchToSignup = () => {
-    navigate('/signup')
-  }
-
-  const handleLogin = (_email: string, _password: string, _siteCode?: string) => {
-    // In a real app, this would validate against the API
-    // For now, create a mock user based on the email
-    const mockUser = {
-      id: '1',
-      name: 'Customer',
-      email: _email,
-      phone: '',
+  const handleLoginSuccess = (token: string, user: any) => {
+    localStorage.setItem('token', token)
+    if (user.siteCode) {
+      localStorage.setItem('siteCode', user.siteCode)
+    }
+    login({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone || '',
       profilePicture: '',
-      siteCode: _siteCode || ''
-    }
-    // Store siteCode if provided
-    if (_siteCode) {
-      localStorage.setItem('siteCode', _siteCode)
-    }
-    login(mockUser)
-    navigate('/profile')
+    })
+    navigate('/menu')
   }
 
   return (
-    <Login 
+    <Login
       onClose={handleClose}
-      onSwitchToSignup={handleSwitchToSignup}
-      onLogin={handleLogin}
+      onLoginSuccess={handleLoginSuccess}
     />
   )
 }

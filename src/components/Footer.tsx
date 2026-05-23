@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import {
   FaPhone,
   FaEnvelope,
@@ -9,7 +8,6 @@ import {
 } from 'react-icons/fa'
 
 const Footer: React.FC = () => {
-  const navigate = useNavigate()
   const [siteCode, setSiteCode] = useState('')
 
   // Get siteCode from URL or localStorage on mount
@@ -29,15 +27,6 @@ const Footer: React.FC = () => {
       }
     }
   }, [])
-
-  const handleAdminLogin = () => {
-    // Navigate to admin login with siteCode if available
-    if (siteCode) {
-      navigate(`/admin?siteCode=${siteCode}`)
-    } else {
-      navigate('/admin')
-    }
-  }
 
   return (
     <>
@@ -162,13 +151,6 @@ const Footer: React.FC = () => {
                 Restaurant: {siteCode}
               </p>
             )}
-            <button
-              className="btn btn-outline-light btn-sm"
-              onClick={handleAdminLogin}
-              style={{ marginTop: '10px' }}
-            >
-              Admin Login
-            </button>
           </div>
         </div>
       </footer>

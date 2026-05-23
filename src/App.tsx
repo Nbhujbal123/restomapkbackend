@@ -91,11 +91,16 @@ function AppContent() {
     setToastFunction(toast.showToast)
   }, [toast.showToast])
 
+  // Scroll to top on every page navigation
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [location.pathname])
+
   // Store siteCode from URL to localStorage when user visits the site
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search)
     const siteCodeFromUrl = urlParams.get('siteCode')
-    
+
     if (siteCodeFromUrl) {
       // Store siteCode in localStorage for later use
       localStorage.setItem('siteCode', siteCodeFromUrl.toUpperCase())

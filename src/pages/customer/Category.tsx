@@ -1,27 +1,32 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { FaSearch, FaLeaf, FaDrumstickBite } from 'react-icons/fa'
+import { FaSearch, FaLeaf, FaDrumstickBite, FaChevronRight } from 'react-icons/fa'
 import { menuItems } from '../../data/menuItems'
 import { toast } from '../../components/Toast'
-import './Category.css'
+
+const CATEGORY_META: Record<string, { icon: string; gradient: string; light: string }> = {
+  'All Items':   { icon: '🍽️', gradient: 'linear-gradient(135deg,#FF6A00,#FF9900)', light: '#fff8f0' },
+  'Starters':    { icon: '🥗', gradient: 'linear-gradient(135deg,#10b981,#34d399)', light: '#f0fdf4' },
+  'Main Course': { icon: '🥘', gradient: 'linear-gradient(135deg,#ef4444,#f97316)', light: '#fff1f2' },
+  'Kids':        { icon: '👶', gradient: 'linear-gradient(135deg,#f59e0b,#fbbf24)', light: '#fffbeb' },
+  'Desserts':    { icon: '🍰', gradient: 'linear-gradient(135deg,#ec4899,#f472b6)', light: '#fdf2f8' },
+  'Beverages':   { icon: '🥤', gradient: 'linear-gradient(135deg,#3b82f6,#60a5fa)', light: '#eff6ff' },
+}
 
 const Category: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [selectedType, setSelectedType] = useState<string>('All')
-  const [selectedPrice, setSelectedPrice] = useState<string>('All Prices')
-  const [isTypeSelected, setIsTypeSelected] = useState(false);
+  const [isTypeSelected, setIsTypeSelected] = useState(false)
   const navigate = useNavigate()
 
   const categories = [
-    { name: 'All Items', icon: '🍽️', count: menuItems.length },
-    { name: 'Starters', icon: '🥗', count: menuItems.filter(item => item.category === 'Starters').length },
-    { name: 'Main Course', icon: '🥘', count: menuItems.filter(item => item.category === 'Main Course').length },
-    { name: 'Kids', icon: '👶', count: menuItems.filter(item => item.category === 'Kids').length },
-    { name: 'Desserts', icon: '🍰', count: menuItems.filter(item => item.category === 'Desserts').length },
-    { name: 'Beverages', icon: '🥤', count: menuItems.filter(item => item.category === 'Beverages').length }
+    { name: 'All Items',   count: menuItems.length },
+    { name: 'Starters',   count: menuItems.filter(i => i.category === 'Starters').length },
+    { name: 'Main Course',count: menuItems.filter(i => i.category === 'Main Course').length },
+    { name: 'Kids',       count: menuItems.filter(i => i.category === 'Kids').length },
+    { name: 'Desserts',   count: menuItems.filter(i => i.category === 'Desserts').length },
+    { name: 'Beverages',  count: menuItems.filter(i => i.category === 'Beverages').length },
   ]
-
-  const filteredCategories = categories
 
   const filteredMenuItems = searchQuery.trim()
     ? menuItems.filter(item =>
@@ -34,100 +39,111 @@ const Category: React.FC = () => {
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      if (filteredMenuItems.length > 0) handleDishClick(filteredMenuItems[0])
+    if (e.key === 'Enter' && filteredMenuItems.length > 0) handleDishClick(filteredMenuItems[0])
+  }
+
+  const handleTypeSelection = (type: string) => {
+    setSelectedType(type)
+    setIsTypeSelected(true)
+    if (type === 'Veg') {
+      localStorage.setItem('selectedType', 'veg')
+    } else if (type === 'Non-Veg') {
+      localStorage.setItem('selectedType', 'nonveg')
+    } else {
+      localStorage.setItem('selectedType', 'all')
+      setIsTypeSelected(false)
+      navigate('/menu?type=all&category=All')
     }
   }
 
-  // Handle type selection filters
-  const handleTypeSelection = (type: string) => {
-    setSelectedType(type);
-    setIsTypeSelected(true);
+  const getCategoryLink = (name: string) => {
+    if (name === 'All Items') return `/menu?type=${localStorage.getItem('selectedType') || 'all'}&category=All`
+    if (['Desserts', 'Beverages', 'Kids'].includes(name)) return `/menu?type=all&category=${encodeURIComponent(name)}`
+    if (isTypeSelected) return `/menu?type=${localStorage.getItem('selectedType')}&category=${encodeURIComponent(name)}`
+    return ''
+  }
 
-    if (type === 'Veg') {
-      localStorage.setItem('selectedType', 'veg');
-    } else if (type === 'Non-Veg') {
-      localStorage.setItem('selectedType', 'nonveg');
-    } else {
-      localStorage.setItem('selectedType', 'all');
-      setIsTypeSelected(false);
-      // Redirect to menu showing all items, ensuring category is set to 'All'
-      navigate('/menu?type=all&category=All');
-    }
-  };
+  const needsTypeFirst = (name: string) =>
+    name !== 'All Items' && !['Desserts', 'Beverages', 'Kids'].includes(name) && !isTypeSelected
 
   return (
-    <div className="container py-5" style={{ backgroundColor: 'var(--background-color)', minHeight: '100vh' }}>
-      {/* 🔍 Search Bar */}
-      <div className="row justify-content-center mb-4 position-relative">
-        <div className="col-12 col-md-8 col-lg-6">
-          <div
-            className="d-flex align-items-center bg-white shadow"
-            style={{
-              borderRadius: '30px',
-              padding: '8px 15px',
-              boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
-              position: 'relative',
-              zIndex: 2
-            }}
-          >
-            <FaSearch className="text-muted me-2 fs-5" />
+    <div style={{ background: '#f8f9fa', minHeight: '100vh', paddingBottom: '40px' }}>
+
+      {/* ── hero bar ── */}
+      <div style={{
+        background: 'linear-gradient(135deg, #FF6A00 0%, #FF9900 100%)',
+        padding: '32px 20px 64px',
+        textAlign: 'center'
+      }}>
+        <h1 style={{ color: '#fff', fontWeight: 800, fontSize: '26px', marginBottom: '6px' }}>
+          What are you craving?
+        </h1>
+        <p style={{ color: 'rgba(255,255,255,.85)', fontSize: '14px', marginBottom: '24px' }}>
+          Browse categories or search for your favourite dish
+        </p>
+
+        {/* Search */}
+        <div style={{ position: 'relative', maxWidth: '500px', margin: '0 auto' }}>
+          <div style={{
+            background: '#fff',
+            borderRadius: '50px',
+            padding: '10px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            boxShadow: '0 8px 32px rgba(0,0,0,.15)'
+          }}>
+            <FaSearch style={{ color: '#FF6A00', flexShrink: 0 }} />
             <input
               type="text"
-              className="form-control border-0"
-              placeholder="Search dishes..."
+              placeholder="Search dishes…"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={e => setSearchQuery(e.target.value)}
               onKeyDown={handleKeyDown}
               style={{
-                borderRadius: '30px',
-                boxShadow: 'none',
-                padding: '10px 5px',
-                fontSize: '16px',
+                border: 'none', outline: 'none', flex: 1,
+                fontSize: '15px', background: 'transparent', color: '#1f2937'
               }}
             />
           </div>
 
-          {/* ▼ Dish dropdown */}
+          {/* dropdown */}
           {searchQuery.trim() && (
-            <div
-              className="bg-white shadow-sm rounded mt-2 position-absolute w-100"
-              style={{ zIndex: 3, maxHeight: '300px', overflowY: 'auto' }}
-            >
+            <div style={{
+              position: 'absolute', top: 'calc(100% + 8px)', left: 0, right: 0,
+              background: '#fff', borderRadius: '16px',
+              boxShadow: '0 8px 32px rgba(0,0,0,.15)', zIndex: 20,
+              maxHeight: '320px', overflowY: 'auto', textAlign: 'left'
+            }}>
               {filteredMenuItems.length > 0 ? (
-                filteredMenuItems.slice(0, 10).map((dish) => (
+                filteredMenuItems.slice(0, 8).map(dish => (
                   <div
                     key={dish.id ?? dish.name}
-                    className="d-flex align-items-center p-3 border-bottom search-result-item"
-                    style={{ cursor: 'pointer' }}
                     onClick={() => handleDishClick(dish)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '12px',
+                      padding: '12px 16px', cursor: 'pointer',
+                      borderBottom: '1px solid #f3f4f6', transition: 'background .15s'
+                    }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#fff8f0'}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#fff'}
                   >
                     <img
-                      src={dish.image}
-                      alt={dish.name}
-                      width="50"
-                      height="50"
-                      style={{
-                        borderRadius: '8px',
-                        objectFit: 'cover',
-                        marginRight: '10px',
-                      }}
+                      src={dish.image} alt={dish.name}
+                      style={{ width: '52px', height: '52px', borderRadius: '10px', objectFit: 'cover', flexShrink: 0 }}
                     />
-                    <div className="search-result-details">
-                      <h6>{dish.name}</h6>
-                      <p>₹{dish.price}</p>
-                      <p>{dish.category}</p>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '14px', color: '#1f2937' }}>{dish.name}</div>
+                      <div style={{ fontSize: '12px', color: '#FF6A00', fontWeight: 600 }}>₹{dish.price}</div>
+                      <div style={{ fontSize: '11px', color: '#9ca3af' }}>{dish.category}</div>
                     </div>
+                    <FaChevronRight style={{ marginLeft: 'auto', color: '#d1d5db', flexShrink: 0 }} size={12} />
                   </div>
                 ))
               ) : (
-                <div className="text-center p-4">
-                  <img
-                    src="/assets/images/no-dishes.png"
-                    alt="No dishes found"
-                    style={{ width: '230px' }}
-                  />
+                <div style={{ padding: '32px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '32px', marginBottom: '8px' }}>🍽️</div>
+                  <p style={{ color: '#9ca3af', fontSize: '14px', margin: 0 }}>No dishes found</p>
                 </div>
               )}
             </div>
@@ -135,159 +151,120 @@ const Category: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter Buttons */}
-      <div className="row justify-content-center mb-4">
-        <div className="col-12 col-md-10 col-lg-8">
-          <div className="d-flex flex-wrap justify-content-center gap-1 mb-3">
-            {['All', 'Veg', 'Non-Veg'].map(type => (
-              <button
-                key={type}
-                className={`btn rounded-pill px-4 py-2 fw-semibold ${
-                  selectedType === type ? 'text-white' : 'btn-outline-secondary'
-                }`}
-                style={selectedType === type ? {
-                  background: 'linear-gradient(90deg, #FFA500, #FF6B00)',
-                  border: 'none'
-                } : {}}
-                onClick={() => handleTypeSelection(type)}
-              >
-                {type === 'Veg' && <FaLeaf className="me-2" />}
-                {type === 'Non-Veg' && <FaDrumstickBite className="me-2" />}
-                {type}
-              </button>
-            ))}
-          </div>
+      {/* ── content pulled up ── */}
+      <div style={{ padding: '0 16px', maxWidth: '700px', margin: '-32px auto 0', position: 'relative', zIndex: 10 }}>
 
-          <div className="d-flex justify-content-center gap-1 gap-md-2 overflow-auto pb-2 px-2" style={{
-            maxWidth: '100%',
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none',
-            WebkitOverflowScrolling: 'touch'
-          }}>
-            {['All Prices', 'Under ₹200', '₹200–₹400', '₹400+'].map(price => (
+        {/* Type filter pill bar */}
+        <div style={{
+          background: '#fff', borderRadius: '16px',
+          padding: '14px 16px', marginBottom: '20px',
+          boxShadow: '0 4px 20px rgba(0,0,0,.08)'
+        }}>
+          <p style={{ fontSize: '12px', color: '#9ca3af', fontWeight: 600, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '.5px' }}>
+            Filter by type
+          </p>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {[
+              { label: 'All', icon: null },
+              { label: 'Veg', icon: <FaLeaf size={12} /> },
+              { label: 'Non-Veg', icon: <FaDrumstickBite size={12} /> },
+            ].map(({ label, icon }) => (
               <button
-                key={price}
-                className={`btn rounded-pill px-2 px-md-4 py-2 fw-semibold flex-shrink-0 ${
-                  selectedPrice === price ? 'text-white' : 'btn-outline-secondary'
-                }`}
-                style={selectedPrice === price ? {
-                  background: 'linear-gradient(90deg, #FFA500, #FF6B00)',
-                  border: 'none',
-                  whiteSpace: 'nowrap',
-                  fontSize: '12px'
-                } : { whiteSpace: 'nowrap', fontSize: '12px' }}
-                onClick={() => setSelectedPrice(price)}
+                key={label}
+                onClick={() => handleTypeSelection(label)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  padding: '8px 18px', borderRadius: '50px',
+                  border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '13px',
+                  background: selectedType === label
+                    ? 'linear-gradient(90deg,#FF6A00,#FF9900)'
+                    : '#f3f4f6',
+                  color: selectedType === label ? '#fff' : '#6b7280',
+                  transition: 'all .2s',
+                  boxShadow: selectedType === label ? '0 4px 12px rgba(255,106,0,.3)' : 'none'
+                }}
               >
-                {price}
+                {icon} {label}
               </button>
             ))}
           </div>
         </div>
-      </div>
 
-      {/* Category Cards */}
-      <div className="row g-4 justify-content-center">
-        {filteredCategories.map(category => (
-          <div key={category.name} className="col-12 col-sm-6 col-md-3 col-lg-2">
-            <Link
-              to={
-                category.name === 'All Items'
-                  ? `/menu?type=${localStorage.getItem('selectedType') || 'all'}&category=All`
-                  : category.name === 'Desserts' || category.name === 'Beverages' || category.name === 'Kids'
-                    ? `/menu?type=all&category=${encodeURIComponent(category.name)}`
-                    : isTypeSelected
-                      ? `/menu?type=${localStorage.getItem('selectedType')}&category=${encodeURIComponent(category.name)}`
-                      : ''
-              }
-              onClick={(e) => {
-                // Only block navigation if it's not "All Items", "Desserts", "Beverages" or "Kids"
-                if (
-                  category.name !== 'All Items' &&
-                  category.name !== 'Desserts' &&
-                  category.name !== 'Beverages' &&
-                  category.name !== 'Kids' &&
-                  !isTypeSelected
-                ) {
-                  e.preventDefault()
-                  toast.warning('Please select Veg or Non-Veg first!')
-                }
-              }}
-              className="text-decoration-none"
-            >
-              <div
-                className="card h-100 border-0 shadow-sm text-center position-relative overflow-hidden"
-                style={{
-                  borderRadius: '20px',
-                  transition: 'all 0.3s ease-in-out',
+        {/* Category cards */}
+        <h6 style={{ fontWeight: 700, color: '#1f2937', marginBottom: '14px', fontSize: '15px' }}>
+          Browse Categories
+        </h6>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px' }}>
+          {categories.map(category => {
+            const meta = CATEGORY_META[category.name]
+            const link = getCategoryLink(category.name)
+            const blocked = needsTypeFirst(category.name)
+
+            return (
+              <Link
+                key={category.name}
+                to={link}
+                onClick={e => {
+                  if (blocked) {
+                    e.preventDefault()
+                    toast.warning('Please select Veg or Non-Veg first!')
+                  }
+                }}
+                style={{ textDecoration: 'none' }}
+              >
+                <div style={{
+                  background: '#fff',
+                  borderRadius: '18px',
+                  overflow: 'hidden',
+                  boxShadow: '0 2px 12px rgba(0,0,0,.07)',
+                  transition: 'transform .2s, box-shadow .2s',
                   cursor: 'pointer'
                 }}
-                onMouseEnter={(e: React.MouseEvent<HTMLDivElement>) => {
-                  const target = e.currentTarget as HTMLElement
-                  target.style.transform = 'translateY(-5px)'
-                  target.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.15)'
-                }}
-                onMouseLeave={(e: React.MouseEvent<HTMLDivElement>) => {
-                  const target = e.currentTarget as HTMLElement
-                  target.style.transform = 'translateY(0)'
-                  target.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.1)'
-                }}
-              >
-                <div className="card-body d-flex flex-column justify-content-center p-2 p-md-4">
-                  <div className="d-none d-sm-block" style={{ fontSize: '1.8rem', marginBottom: '0.8rem' }}>
-                    {category.icon}
-                  </div>
-
-                  <h5 className="card-title fw-bold text-dark mb-1 mb-md-2">{category.name}</h5>
-                  <p className="text-muted mb-0">{category.count} items</p>
-                </div>
-
-                <div
-                  className="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
-                  style={{
-                    background: 'linear-gradient(135deg, rgba(255,165,0,0.9), rgba(255,107,0,0.9))',
-                    opacity: 0,
-                    transition: 'opacity 0.3s ease-in-out',
-                    borderRadius: '20px'
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLElement).style.transform = 'translateY(-3px)'
+                    ;(e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(0,0,0,.12)'
                   }}
-                  onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.opacity = '1'}
-                  onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.opacity = '0'}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'
+                    ;(e.currentTarget as HTMLElement).style.boxShadow = '0 2px 12px rgba(0,0,0,.07)'
+                  }}
                 >
-                  <span className="text-white fw-bold fs-5">Explore →</span>
+                  {/* colored top strip */}
+                  <div style={{
+                    background: meta.gradient,
+                    height: '80px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '36px'
+                  }}>
+                    {meta.icon}
+                  </div>
+                  {/* info */}
+                  <div style={{
+                    padding: '14px 16px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                  }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '14px', color: '#1f2937' }}>
+                        {category.name}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '2px' }}>
+                        {category.count} items
+                      </div>
+                    </div>
+                    <div style={{
+                      width: '28px', height: '28px', borderRadius: '50%',
+                      background: meta.light, display: 'flex',
+                      alignItems: 'center', justifyContent: 'center'
+                    }}>
+                      <FaChevronRight size={11} style={{ color: '#FF6A00' }} />
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </Link>
-          </div>
-        ))}
+              </Link>
+            )
+          })}
+        </div>
       </div>
-
-      <style>{`
-        .row.justify-content-center.position-relative > .col-12.col-md-8.col-lg-6 {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-        }
-        .row.justify-content-center.position-relative .position-absolute.w-100 {
-          top: 100% !important;
-          transform: none !important;
-          display: block !important;
-        }
-        .search-result-item h6 {
-            margin-bottom: 0.2rem;
-            font-size: 16px;
-        }
-        .search-result-item p {
-            margin-bottom: 0;
-            font-size: 13px;
-            color: #6c757d;
-        }
-        .search-result-item img {
-          width: 80px !important;
-          height: 80px !important;
-          border-radius: 10px;
-          object-fit: cover;
-          margin: 0 10px 0 0;
-        }
-      `}</style>
     </div>
   )
 }

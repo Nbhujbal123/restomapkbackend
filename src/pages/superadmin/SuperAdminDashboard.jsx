@@ -1,23 +1,21 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  FaCrown,
   FaUtensils,
   FaCheckCircle,
   FaShoppingCart,
+  FaRupeeSign,
+  FaUsers,
+  FaChartLine,
   FaPlus,
   FaList,
-  FaSignOutAlt,
-  FaChartLine,
-  FaUsers,
-  FaRupeeSign,
-  FaHome
+  FaArrowRight,
+  FaCircle
 } from "react-icons/fa";
-
+import SuperAdminLayout from "./SuperAdminLayout";
 import { API_BASE_URL } from "../../config/api";
 
 const SuperAdminDashboard = () => {
-
   const navigate = useNavigate();
 
   const [stats, setStats] = useState({
@@ -29,329 +27,404 @@ const SuperAdminDashboard = () => {
     totalRevenue: 0
   });
 
+  const [loading, setLoading] = useState(true);
+  const [statsError, setStatsError] = useState(null);
+  const [recentRestaurants, setRecentRestaurants] = useState([]);
+
   useEffect(() => {
-
     const token = localStorage.getItem("token");
-
     if (!token) {
       navigate("/superadmin/login");
       return;
     }
-
     fetchStats();
-
+    fetchRecentRestaurants();
   }, []);
 
   const fetchStats = async () => {
-
     try {
-
       const token = localStorage.getItem("token");
-
       const res = await fetch(`${API_BASE_URL}/superadmin/dashboard-summary`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        headers: { Authorization: `Bearer ${token}` }
       });
-
+      if (res.status === 401) {
+        localStorage.removeItem("token");
+        navigate("/superadmin/login");
+        return;
+      }
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.error("Dashboard API error:", res.status, err);
+        setStatsError(err.message || `Server error (${res.status})`);
+        return;
+      }
       const data = await res.json();
-
       setStats(data);
-
+      setStatsError(null);
     } catch (error) {
-      console.log(error);
+      console.error("Dashboard fetch failed:", error);
+      setStatsError("Cannot reach the server. Make sure the backend is running.");
+    } finally {
+      setLoading(false);
     }
-
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    navigate("/superadmin/login");
+  const fetchRecentRestaurants = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_BASE_URL}/superadmin/restaurants`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.status === 401) return;
+      if (!res.ok) {
+        console.error("Restaurants API error:", res.status);
+        return;
+      }
+      const data = await res.json();
+      // Show the 5 most recently added (last 5 in insertion order)
+      const recent = Array.isArray(data) ? [...data].reverse().slice(0, 5) : [];
+      setRecentRestaurants(recent);
+    } catch (error) {
+      console.error("Restaurants fetch failed:", error);
+    }
   };
+
+  const statCards = [
+    {
+      title: "Total Restaurants",
+      value: stats.totalRestaurants,
+      icon: <FaUtensils />,
+      color: "#6366f1",
+      bg: "rgba(99,102,241,0.1)",
+      trend: "+2 this month"
+    },
+    {
+      title: "Active Restaurants",
+      value: stats.activeRestaurants,
+      icon: <FaCheckCircle />,
+      color: "#22c55e",
+      bg: "rgba(34,197,94,0.1)",
+      trend: "Running smoothly"
+    },
+    {
+      title: "Orders Today",
+      value: stats.ordersToday,
+      icon: <FaShoppingCart />,
+      color: "#f59e0b",
+      bg: "rgba(245,158,11,0.1)",
+      trend: "+12% vs yesterday"
+    },
+    {
+      title: "Revenue Today",
+      value: `₹${Math.round(stats.revenueToday).toLocaleString("en-IN")}`,
+      icon: <FaRupeeSign />,
+      color: "#06b6d4",
+      bg: "rgba(6,182,212,0.1)",
+      trend: "+8% vs yesterday"
+    },
+    {
+      title: "Total Customers",
+      value: stats.totalCustomers,
+      icon: <FaUsers />,
+      color: "#ec4899",
+      bg: "rgba(236,72,153,0.1)",
+      trend: "Across all restaurants"
+    },
+    {
+      title: "Total Revenue",
+      value: `₹${Math.round(stats.totalRevenue).toLocaleString("en-IN")}`,
+      icon: <FaChartLine />,
+      color: "#10b981",
+      bg: "rgba(16,185,129,0.1)",
+      trend: "All-time earnings"
+    }
+  ];
+
+  const quickActions = [
+    {
+      label: "Create Restaurant",
+      icon: <FaPlus />,
+      color: "#6366f1",
+      path: "/superadmin/create-restaurant"
+    },
+    {
+      label: "Manage Restaurants",
+      icon: <FaList />,
+      color: "#22c55e",
+      path: "/superadmin/restaurants"
+    },
+    {
+      label: "View Analytics",
+      icon: <FaChartLine />,
+      color: "#f59e0b",
+      path: "/superadmin/analytics"
+    }
+  ];
+
+  const headerAction = (
+    <button
+      className="btn btn-primary d-none d-md-flex align-items-center gap-2"
+      style={{ borderRadius: "10px", fontWeight: 600, fontSize: "13.5px" }}
+      onClick={() => navigate("/superadmin/create-restaurant")}
+    >
+      <FaPlus /> Create Restaurant
+    </button>
+  );
+
+  if (loading) {
+    return (
+      <SuperAdminLayout title="Platform Overview" subtitle="Monitor restaurants and system performance">
+        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: "400px" }}>
+          <div className="spinner-border" style={{ color: "#6366f1", width: "48px", height: "48px" }} />
+        </div>
+      </SuperAdminLayout>
+    );
+  }
 
   return (
+    <SuperAdminLayout
+      title="Platform Overview"
+      subtitle="Monitor restaurants and system performance"
+      action={headerAction}
+    >
 
-    <div className="d-flex" style={{ minHeight: "100vh" }}>
+      {/* API ERROR BANNER */}
+      {statsError && (
+        <div className="alert alert-danger d-flex align-items-center gap-2 mb-4" style={{ borderRadius: "10px", fontSize: "13.5px" }}>
+          <span style={{ fontWeight: 600 }}>Dashboard Error:</span> {statsError}
+        </div>
+      )}
 
-      {/* SIDEBAR */}
+      {/* STATS GRID */}
+      <div className="row g-3 mb-4">
+        {statCards.map((card, i) => (
+          <div className="col-6 col-md-4 col-xl-4" key={i}>
+            <div className="sa-stat-card h-100">
+              <div
+                className="sa-stat-card__icon"
+                style={{ background: card.color }}
+              >
+                {card.icon}
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <p className="sa-stat-card__label">{card.title}</p>
+                <h3 className="sa-stat-card__value">{card.value}</h3>
+                <p style={{ fontSize: "11.5px", color: "#94a3b8", margin: "4px 0 0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {card.trend}
+                </p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
 
-      <div
-        style={{
-          width: "260px",
-          background: "linear-gradient(180deg,#0f172a,#1e293b)",
-          color: "white",
-          padding: "25px"
-        }}
-      >
+      {/* QUICK ACTIONS + SYSTEM STATUS */}
+      <div className="row g-3 mb-4">
 
-        <h4 className="mb-4 d-flex align-items-center gap-2">
-          <FaCrown color="gold" /> Super Admin
-        </h4>
+        <div className="col-md-8">
+          <div className="sa-card h-100">
+            <div className="sa-card__header">
+              <h6 className="sa-card__title">Quick Actions</h6>
+            </div>
+            <div className="sa-card__body">
+              <div className="row g-3">
+                {quickActions.map((action, i) => (
+                  <div className="col-12 col-sm-4" key={i}>
+                    <button
+                      className="btn w-100 d-flex align-items-center gap-3 text-start p-3"
+                      style={{
+                        border: `1.5px solid ${action.color}20`,
+                        background: `${action.color}08`,
+                        borderRadius: "12px",
+                        transition: "all 0.2s"
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.background = `${action.color}14`;
+                        e.currentTarget.style.transform = "translateY(-1px)";
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.background = `${action.color}08`;
+                        e.currentTarget.style.transform = "translateY(0)";
+                      }}
+                      onClick={() => navigate(action.path)}
+                    >
+                      <div
+                        style={{
+                          width: "38px",
+                          height: "38px",
+                          borderRadius: "10px",
+                          background: action.color,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "white",
+                          fontSize: "15px",
+                          flexShrink: 0
+                        }}
+                      >
+                        {action.icon}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ margin: 0, fontWeight: 600, fontSize: "13px", color: "#0f172a" }}>
+                          {action.label}
+                        </p>
+                      </div>
+                      <FaArrowRight style={{ color: action.color, fontSize: "12px", flexShrink: 0 }} />
+                    </button>
+                  </div>
+                ))}
+              </div>
 
-        <div className="d-grid gap-2">
+              {/* Platform Insights Row */}
+              <div className="row g-3 mt-1">
+                <div className="col-4">
+                  <div style={{ background: "#f8fafc", borderRadius: "10px", padding: "14px", textAlign: "center" }}>
+                    <p style={{ fontSize: "11px", color: "#64748b", margin: "0 0 6px", fontWeight: 500 }}>New Restaurants</p>
+                    <h5 style={{ margin: 0, fontWeight: 700, color: "#6366f1" }}>+2</h5>
+                  </div>
+                </div>
+                <div className="col-4">
+                  <div style={{ background: "#f8fafc", borderRadius: "10px", padding: "14px", textAlign: "center" }}>
+                    <p style={{ fontSize: "11px", color: "#64748b", margin: "0 0 6px", fontWeight: 500 }}>Orders Growth</p>
+                    <h5 style={{ margin: 0, fontWeight: 700, color: "#22c55e" }}>+12%</h5>
+                  </div>
+                </div>
+                <div className="col-4">
+                  <div style={{ background: "#f8fafc", borderRadius: "10px", padding: "14px", textAlign: "center" }}>
+                    <p style={{ fontSize: "11px", color: "#64748b", margin: "0 0 6px", fontWeight: 500 }}>Revenue Growth</p>
+                    <h5 style={{ margin: 0, fontWeight: 700, color: "#f59e0b" }}>+8%</h5>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
+        <div className="col-md-4">
+          <div className="sa-card h-100">
+            <div className="sa-card__header">
+              <h6 className="sa-card__title">System Status</h6>
+              <span
+                className="badge"
+                style={{ background: "rgba(34,197,94,0.1)", color: "#16a34a", fontSize: "11px", borderRadius: "20px", padding: "4px 10px" }}
+              >
+                All Systems Operational
+              </span>
+            </div>
+            <div className="sa-card__body">
+              {[
+                { label: "API Server", status: "Running", ok: true },
+                { label: "Database", status: "Connected", ok: true },
+                { label: "Auth Service", status: "Active", ok: true },
+                { label: "Payment Gateway", status: "Active", ok: true }
+              ].map((item, i) => (
+                <div
+                  key={i}
+                  className="d-flex align-items-center justify-content-between py-2"
+                  style={{ borderBottom: i < 3 ? "1px solid #f1f5f9" : "none" }}
+                >
+                  <div className="d-flex align-items-center gap-2">
+                    <FaCircle style={{ fontSize: "8px", color: item.ok ? "#22c55e" : "#ef4444" }} />
+                    <span style={{ fontSize: "13px", color: "#334155", fontWeight: 500 }}>{item.label}</span>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: "11.5px",
+                      fontWeight: 600,
+                      color: item.ok ? "#16a34a" : "#dc2626",
+                      background: item.ok ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)",
+                      padding: "2px 8px",
+                      borderRadius: "20px"
+                    }}
+                  >
+                    {item.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      {/* RECENT RESTAURANTS */}
+      <div className="sa-card">
+        <div className="sa-card__header">
+          <h6 className="sa-card__title">Recent Restaurants</h6>
           <button
-            className="btn text-start text-white"
-            style={{ background: "rgba(255,255,255,0.05)", borderRadius: "10px" }}
-            onClick={() => navigate("/superadmin/dashboard")}
-          >
-            <FaHome className="me-2" /> Dashboard
-          </button>
-
-          <button
-            className="btn text-start text-white"
-            style={{ background: "rgba(255,255,255,0.05)", borderRadius: "10px" }}
-            onClick={() => navigate("/superadmin/create-restaurant")}
-          >
-            <FaPlus className="me-2" /> Create Restaurant
-          </button>
-
-          <button
-            className="btn text-start text-white"
-            style={{ background: "rgba(255,255,255,0.05)", borderRadius: "10px" }}
+            className="btn btn-sm"
+            style={{ color: "#6366f1", fontWeight: 600, fontSize: "12.5px" }}
             onClick={() => navigate("/superadmin/restaurants")}
           >
-            <FaList className="me-2" /> Manage Restaurants
+            View all <FaArrowRight style={{ fontSize: "10px", marginLeft: "4px" }} />
           </button>
-
-          <button
-            className="btn text-start text-white"
-            style={{ background: "rgba(255,255,255,0.05)", borderRadius: "10px" }}
-            onClick={() => navigate("/superadmin/analytics")}
-          >
-            <FaChartLine className="me-2" /> Analytics
-          </button>
-
         </div>
-
-        <hr className="text-secondary my-4" />
-
-        <button className="btn btn-danger w-100" onClick={handleLogout}>
-          <FaSignOutAlt className="me-2" /> Logout
-        </button>
-
-      </div>
-
-
-      {/* MAIN CONTENT */}
-
-      <div className="flex-grow-1 bg-light">
-
-        {/* HEADER */}
-
-        <div
-          style={{
-            background: "white",
-            padding: "25px",
-            borderBottom: "1px solid #eee",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center"
-          }}
-        >
-
-          <div>
-            <h3 className="fw-bold mb-0">Platform Overview 👑</h3>
-            <p className="text-muted mb-0">
-              Monitor restaurants and system performance
-            </p>
-          </div>
-
-          <button
-            className="btn btn-primary shadow-sm"
-            onClick={() => navigate("/superadmin/create-restaurant")}
-          >
-            <FaPlus className="me-2" />
-            Create Restaurant
-          </button>
-
-        </div>
-
-
-        {/* DASHBOARD CONTENT */}
-
-        <div className="container mt-4">
-
-          {/* STATS */}
-
-          <div className="row g-4">
-
-            <StatCard
-              title="Total Restaurants"
-              value={stats.totalRestaurants}
-              icon={<FaUtensils />}
-              color="#6366F1"
-            />
-
-            <StatCard
-              title="Active Restaurants"
-              value={stats.activeRestaurants}
-              icon={<FaCheckCircle />}
-              color="#22C55E"
-            />
-
-            <StatCard
-              title="Orders Today"
-              value={stats.ordersToday}
-              icon={<FaShoppingCart />}
-              color="#F59E0B"
-            />
-
-            <StatCard
-              title="Revenue Today"
-              value={`₹${stats.revenueToday}`}
-              icon={<FaRupeeSign />}
-              color="#06B6D4"
-            />
-
-            <StatCard
-              title="Total Customers"
-              value={stats.totalCustomers}
-              icon={<FaUsers />}
-              color="#EC4899"
-            />
-
-            <StatCard
-              title="Total Revenue"
-              value={`₹${stats.totalRevenue}`}
-              icon={<FaChartLine />}
-              color="#10B981"
-            />
-
-          </div>
-
-
-          {/* PLATFORM INSIGHTS */}
-
-          <div className="row mt-4">
-
-            <div className="col-md-8">
-
-              <div className="card shadow-sm border-0 p-4">
-                <h5 className="fw-bold mb-3">Platform Insights</h5>
-
-                <div className="row">
-
-                  <div className="col-md-4">
-                    <p className="text-muted mb-1">New Restaurants</p>
-                    <h4 className="fw-bold text-primary">+2</h4>
+        <div className="sa-card__body" style={{ padding: "8px 24px" }}>
+          {recentRestaurants.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8", fontSize: "13.5px" }}>
+              No restaurants created yet.
+            </div>
+          ) : (
+            recentRestaurants.map((r, i) => {
+              const colors = ["#6366f1", "#22c55e", "#f59e0b", "#ec4899", "#10b981"];
+              const dotColor = r.status === "ACTIVE" ? "#22c55e" : "#ef4444";
+              return (
+                <div
+                  key={r._id}
+                  className="d-flex align-items-center gap-3 py-3"
+                  style={{ borderBottom: i < recentRestaurants.length - 1 ? "1px solid #f1f5f9" : "none" }}
+                >
+                  <div
+                    style={{
+                      width: "36px",
+                      height: "36px",
+                      borderRadius: "9px",
+                      background: `linear-gradient(135deg, ${colors[i % colors.length]}, ${colors[(i + 1) % colors.length]})`,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "white",
+                      fontSize: "13px",
+                      flexShrink: 0,
+                      fontWeight: 700
+                    }}
+                  >
+                    {r.name.charAt(0).toUpperCase()}
                   </div>
-
-                  <div className="col-md-4">
-                    <p className="text-muted mb-1">Orders Growth</p>
-                    <h4 className="fw-bold text-success">+12%</h4>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ margin: 0, fontSize: "13.5px", color: "#0f172a", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {r.name}
+                    </p>
+                    <p style={{ margin: "2px 0 0", fontSize: "11.5px", color: "#94a3b8" }}>
+                      {r.siteCode} &nbsp;·&nbsp; {r.email}
+                    </p>
                   </div>
-
-                  <div className="col-md-4">
-                    <p className="text-muted mb-1">Revenue Growth</p>
-                    <h4 className="fw-bold text-warning">+8%</h4>
-                  </div>
-
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "5px",
+                      padding: "3px 10px",
+                      borderRadius: "20px",
+                      fontSize: "11.5px",
+                      fontWeight: 600,
+                      background: r.status === "ACTIVE" ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)",
+                      color: r.status === "ACTIVE" ? "#16a34a" : "#dc2626",
+                      flexShrink: 0
+                    }}
+                  >
+                    <FaCircle style={{ fontSize: "6px", color: dotColor }} />
+                    {r.status}
+                  </span>
                 </div>
-
-              </div>
-
-            </div>
-
-
-            <div className="col-md-4">
-
-              <div className="card shadow-sm border-0 p-4">
-
-                <h5 className="fw-bold mb-3">System Status</h5>
-
-                <p className="mb-2">API Status</p>
-                <span className="badge bg-success">Running</span>
-
-                <p className="mt-3 mb-2">Database</p>
-                <span className="badge bg-success">Connected</span>
-
-              </div>
-
-            </div>
-
-          </div>
-
-
-          {/* RECENT ACTIVITY */}
-
-          <div className="card shadow-sm border-0 mt-4 p-4">
-
-            <h5 className="fw-bold mb-3">Recent Activity</h5>
-
-            <ul className="list-group list-group-flush">
-
-              <li className="list-group-item">
-                Restaurant <b>Spice Hub</b> created
-              </li>
-
-              <li className="list-group-item">
-                New customer registered
-              </li>
-
-              <li className="list-group-item">
-                Order placed worth ₹450
-              </li>
-
-            </ul>
-
-          </div>
-
+              );
+            })
+          )}
         </div>
-
       </div>
 
-    </div>
-
+    </SuperAdminLayout>
   );
 };
 
 export default SuperAdminDashboard;
-
-
-/* STAT CARD COMPONENT */
-
-const StatCard = ({ title, value, icon, color }) => {
-
-  return (
-
-    <div className="col-lg-4 col-md-6">
-
-      <div
-        className="card border-0 shadow-sm h-100"
-        style={{
-          borderRadius: "16px",
-          background: "linear-gradient(145deg,#ffffff,#f3f4f6)"
-        }}
-      >
-
-        <div className="card-body d-flex align-items-center">
-
-          <div
-            className="me-3 d-flex align-items-center justify-content-center"
-            style={{
-              width: "60px",
-              height: "60px",
-              borderRadius: "14px",
-              background: color,
-              color: "white",
-              fontSize: "22px"
-            }}
-          >
-            {icon}
-          </div>
-
-          <div>
-            <h6 className="text-muted">{title}</h6>
-            <h3 className="fw-bold">{value}</h3>
-          </div>
-
-        </div>
-
-      </div>
-
-    </div>
-
-  );
-
-};
